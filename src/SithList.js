@@ -1,3 +1,8 @@
+let Sith = require('./Sith');
+let __D = require('./constants');
+
+
+
 class SithList {
   constructor(dashboard) {
     this._dashboard = dashboard;
@@ -12,7 +17,7 @@ class SithList {
       "3" : null,
       "4" : null,
     }
-    this.addSithAt(new Sith(__D.sidiousPath), 2);
+    this.addSithAt(__D.sidiousPath, 2);
   }
   //logic for fetching master/apprentice stays in here
 
@@ -101,7 +106,7 @@ class SithList {
   }
 
   //helperMethods:
-  addSithAt(sith, key) {
+  addSithAt(url, key) {
     let newSith = new Sith(url, key, this);
     this._indices[key] = newSith;
   }
@@ -139,7 +144,7 @@ class SithList {
     let obj = this._indices
     for (var key in obj) {
       let s = obj[key];
-      if !!(s instanceof Sith && s.data.hasData()) {
+      if (s instanceof Sith && s.data.hasData()) {
         return obj[key];
         break;
       }

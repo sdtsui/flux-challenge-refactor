@@ -1,3 +1,6 @@
+let __D = require('./constants');
+
+
 class Sith {
   constructor(url, index, sithlist) {
     if (index === undefined) return new Error('No index');
@@ -12,66 +15,74 @@ class Sith {
 
   fetch(url, cb) {
     this.pending = superagent.get(url)
-                              .end(cb);
+                              .end(cb.bind(this));
   } 
 
   updateData(err, res) {
     if (err) return; //fail silently
     let data = this.data = JSON.parse(res.text);
-    sithlist.homeworlds[data.homeworld.name] = this;
+    console.log('DATA HAS ARRIVED');
+    this._sithlist._homeworlds[data.homeworld.name] = this;
+    //Tech Debt: Refactor reaching out later:
+    //Problematic...
+    let dash = this._sithlist._dashboard;
+    dash.render(dash.el_slots);
+
     //call fetch again, with specific params to end or do nothing
     this.fillRemainingSlots(this);
   }
 
   fillRemainingSlots(sith = this._sithlist.getFirstSith()) {
     let maybeFetch = this.maybeFetch(sith);
-    if (maybeFetch) sithlist.addAt(maybeFetch.url, maybeFetch.idx);
+    if (maybeFetch) this._sithlist.addSithAt(maybeFetch.url, maybeFetch.idx);
   }
 
   maybeFetch(sith) {
-    let apprentice = maybeFetchDown(sith);
-    let master = maybeFetchUp(sith);
+    let apprentice = this.maybeFetchDown(sith);
+    let master = this.maybeFetchUp(sith);
     return apprentice ? apprentice : 
           master ? master : null;
   }
   // checks for what to request next: url+index, or null
   maybeFetchDown(sith) {
     let next = this.next();
-    let idx = this.index;
+    let idx = sith.index;
     //base case: reach the bottom, can't fetch more
-    if (idx === 4 || this.master === null) {
+    if (idx === 4 || sith.data.master === null) {
+      console.log('hitting base case down');
       return null;
     } else if (next instanceof Sith) {
-      return this.maybeFetchDown(next);
+      return sith.maybeFetchDown(next);
     } else {
       //found a sith with master, and not at bottom
-      let fetchParams = {url: this.master.url, idx: this.index+1};
+      let fetchParams = {url: sith.data.master.url, idx: sith.index+1};
       return fetchParams;
     }
   }
 
   maybeFetchUp(sith) {
-    let prev = this.prev();
-    let idx = this.index;
+    let prev = sith.prev();
+    let idx = sith.index;
     //base case: reach the top, can't fetch more
-    if (idx === 0 || this.apprentice === null) {
+    if (idx === 0 || sith.apprentice === null) {
+      console.log('hitting base case down');
       return null;
     } else if (prev instanceof Sith) {
-      return this.maybeFetchUp(prev);
+      return sith.maybeFetchUp(prev);
     } else {
       //found a sith with apprentice, and not at top
-      let fetchParams = {url: this.apprentice.url, idx: this.index-1};
+      let fetchParams = {url: sith.data.apprentice.url, idx: sith.index-1};
       return fetchParams;
     }
 
   }
 
   next() {
-    return getSithAt(this.index+1);
+    return this._sithlist.getSithAt(this.index+1);
   }
 
   prev() {
-    return getSithAt(this.index-1);
+    return this._sithlist.getSithAt(this.index-1);
   }
 
   cancel() {
