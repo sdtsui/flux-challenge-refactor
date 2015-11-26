@@ -11,31 +11,98 @@ var Sith = require('./Sith');
 
 var Dashboard = (function () {
   function Dashboard() {
+    var _this = this;
+
     var entryPoint = arguments.length <= 0 || arguments[0] === undefined ? document.querySelector('.app-container') : arguments[0];
 
     _classCallCheck(this, Dashboard);
 
     this.$el = entryPoint;
     this.render();
+    /**
+     * Tech Debt: Messy storage of nodes
+     * @type {[type]}
+     */
     this.el_scrollable_list = document.querySelector('css-scrollable-list');
     this.el_slots = document.querySelector('.css-slots');
-    this.el_obiwan = document.querySelector('.css-planet-monitor');
+    this.el_jedi = document.querySelector('.css-planet-monitor');
     this.el_top_button = document.querySelector('.css-button-up');
     this.el_btm_button = document.querySelector('.css-button-down');
-    console.log("FIRST RENDER");
+    this.buttons = [this.el_top_button, this.el_btm_button];
 
-    this.sithlist = new SithList(this);
-    this.obiwan = {}; //TBD
+    /**
+     * Components:
+     *   - obiwan
+     *   - button controller for UI input
+     *   - sithList is a SithList instance, stores Sith instances
+     * @type {SithList}
+     */
+    this._sithlist = new SithList(this);
+    this._jedi = {}; //TBD
 
-    console.log("PASSING IN", this.el_slots);
-    console.log("PASSING IN", this.el_slots === this.el_slots);
-    console.log("ESCOND RENDER");
+    /**
+     * This object is a candidate for use of function composition.
+     * It is inherently stateless.
+     * @type {Object}
+     */
+    this._ui = {
+      _frozen: false,
+      topIsActive: function topIsActive() {},
+      btmIsActive: function btmIsActive() {},
+      respondToClick: function respondToClick(event) {
+        var t = event.currentTarget;
+        if (!t.classList.contains('css-button-disabled')) {
+          //not disabled, so invoke shift
+          var sList = _this._sithlist;
+          var fnKey = t.classList.contains('css-button-up') ? 'shiftListUp' : 'shiftListDown';
+          sList[fnKey].bind(_this._sithlist)();
+        } else {
+          //do nothing, button is disabled
+        }
+      },
+      disableIfActive: function disableIfActive(btn) {
+        if (!btn.classList.contains('css-button-disabled')) {
+          btn.classList.toggle('css-button-disabled');
+        }
+      },
+      //must bind This
+      enableIfAllowed: function enableIfAllowed(btn) {
+        if (_this._ui._frozen === false) {
+          if (btn.classList.contains('css-button-disabled')) {
+            btn.classList.toggle('css-button-disabled');
+          }
+        }
+        //if UI isn't frozen.
+        //rules: UI is not frozen.
+        //  top if top has a master
+        //  bottom if bottom has a master
+      },
+      forEachButton: function forEachButton(cb) {
+        _this.buttons.forEach(cb);
+      },
+      disableAll: function disableAll() {
+        var btns = _this._ui;
+        btns.forEachButton(btns.disableIfActive);
+      }
+      //must bind This
+    };
 
     this.render(this.el_slots);
+    this.buttons.forEach((function (btn) {
+      btn.addEventListener('mousedown', _this._ui.respondToClick.bind(_this._sithList));
+    }).bind(this));
+
+    //disable to start
+    this._ui.forEachButton(this._ui.disableIfActive);
 
     //when events are fired that end a planet conflict, remember to re-trigger
     //'resumefetching'
   }
+
+  /**
+   * [renderList description]
+   * @return {[type]} [description]
+   */
 
   _createClass(Dashboard, [{
     key: 'renderList',
@@ -58,22 +125,8 @@ var Dashboard = (function () {
         templateString = '<div class="css-root">\n        <h1 class="css-planet-monitor"></h1>\n        <section class="css-scrollable-list">\n          <ul class="css-slots">\n          </ul>\n          <div class="css-scroll-buttons">\n            <button class="css-button-up"></button>\n            <button class="css-button-down"></button>\n          </div>\n        </section>\n      </div>';
         document.querySelector('.app-container').innerHTML = templateString;
       } else if (node === this.el_slots) {
-        //Tech Debt: May not always iterate in correct order.
-        //May need to convert into an array and sort by index first.
-        // let m = mappedData = this.sithlist.mapOverIndices((maybeSith) => {
-        //   if (maybeSith && maybeSith instanceof Sith) {
-        //     let hasData = maybeSith.hasData();
-        //     let n = (hasData) ? maybeSith.data.name : '';
-        //     let h = (hasData) ? 'Homeworld: ' + maybeSith.data.homeworld.name : '';
-        //     return {
-        //       n : n,
-        //       h : h,
-        //     };
-        //   }
-        // });
-        //
         node.innerHTML = '';
-        var m = this.sithlist._indices;
+        var m = this._sithlist._indices;
         for (var key in m) {
           var sith = m[key];
           var _name = !!sith && sith.hasData() ? sith.data.name : "";
@@ -81,7 +134,6 @@ var Dashboard = (function () {
           var newSlot = document.createElement('li');
           newSlot.innerHTML = '<h3>' + _name + '</h3><h6>' + homeworld + '</h6>';
           newSlot.classList.toggle('css-slot');
-          console.log('appending data from key : ', key);
           node.appendChild(newSlot);
           // Tech Debt : Why wasn't this working?
           // _HTML += ('<li class="css-slot"><h3>' +
@@ -120,7 +172,7 @@ var Sith = (function () {
     this._sithlist = sithlist;
     this.data = undefined;
     this.url = url;
-    this.pending = undefined;
+    this.pending = undefined; // not always updated correctly :(
     this.index = index;
 
     this.fetch(this.url, this.updateData);
@@ -136,12 +188,20 @@ var Sith = (function () {
     value: function updateData(err, res) {
       if (err) return; //fail silently
       var data = this.data = JSON.parse(res.text);
-      console.log('DATA HAS ARRIVED');
       this._sithlist._homeworlds[data.homeworld.name] = this;
+
+      /**
+       * 
+       */
       //Tech Debt: Refactor reaching out later:
       //Problematic...
       var dash = this._sithlist._dashboard;
-      dash.render(dash.el_slots);
+      dash.renderList();
+      debugger;
+      dash._ui.forEachButton(dash._ui.enableIfAllowed.bind(dash));
+      /**
+       * 
+       */
 
       //call fetch again, with specific params to end or do nothing
       this.fillRemainingSlots(this);
@@ -149,7 +209,7 @@ var Sith = (function () {
   }, {
     key: 'fillRemainingSlots',
     value: function fillRemainingSlots() {
-      var sith = arguments.length <= 0 || arguments[0] === undefined ? this._sithlist.getFirstSith() : arguments[0];
+      var sith = arguments.length <= 0 || arguments[0] === undefined ? this._sithlist.findOneSith() : arguments[0];
 
       var maybeFetch = this.maybeFetch(sith);
       if (maybeFetch) this._sithlist.addSithAt(maybeFetch.url, maybeFetch.idx);
@@ -162,38 +222,43 @@ var Sith = (function () {
       return apprentice ? apprentice : master ? master : null;
     }
 
-    // checks for what to request next: url+index, or null
+    // checks for what to request next: returns {url,index}, or null
+    // Checks apprentices.
   }, {
     key: 'maybeFetchDown',
     value: function maybeFetchDown(sith) {
+
       var next = this.next();
       var idx = sith.index;
       //base case: reach the bottom, can't fetch more
-      if (idx === 4 || sith.data.master === null) {
-        console.log('hitting base case down');
+      if (idx === 4 || sith.data.apprentice.url === null) {
+        console.log('hitting base case down -- Disable btn?');
         return null;
       } else if (next instanceof Sith) {
         return sith.maybeFetchDown(next);
       } else {
-        //found a sith with master, and not at bottom
-        var fetchParams = { url: sith.data.master.url, idx: sith.index + 1 };
+        //found a sith with apprentice, and not at bottom
+        var fetchParams = { url: sith.data.apprentice.url, idx: sith.index + 1 };
         return fetchParams;
       }
     }
+
+    // checks for what to request next: returns {url,index}, or null
+    // Checks masters.
   }, {
     key: 'maybeFetchUp',
     value: function maybeFetchUp(sith) {
       var prev = sith.prev();
       var idx = sith.index;
       //base case: reach the top, can't fetch more
-      if (idx === 0 || sith.apprentice === null) {
-        console.log('hitting base case down');
+      if (idx === 0 || sith.data.master.url === null) {
+        console.log('hitting base case in fetchUp -- Disable btn?');
         return null;
       } else if (prev instanceof Sith) {
         return sith.maybeFetchUp(prev);
       } else {
-        //found a sith with apprentice, and not at top
-        var fetchParams = { url: sith.data.apprentice.url, idx: sith.index - 1 };
+        //found a sith with master, and not at top
+        var fetchParams = { url: sith.data.master.url, idx: sith.index - 1 };
         return fetchParams;
       }
     }
@@ -219,7 +284,7 @@ var Sith = (function () {
     key: 'isPending',
     value: function isPending() {
       //Warn: seems unnecessary
-      return !!(this.data === undefined);
+      return !!this.pending;
     }
   }, {
     key: 'hasData',
@@ -278,6 +343,14 @@ var SithList = (function () {
 
   //logic for fetching master/apprentice stays in here
 
+  /**
+   * Shifts the list `times` times in `dir` direction.
+   * returns an array of removed Sith.
+   * @param  {[type]} times [description]
+   * @param  {[type]} dir   [description]
+   * @return {[type]}       [description]
+   */
+
   _createClass(SithList, [{
     key: 'shiftList',
     value: function shiftList(times, dir) {
@@ -288,41 +361,74 @@ var SithList = (function () {
         "3": null,
         "4": null
       };
-
-      if (dir !== 'up' || dir !== 'down') return;
-      new Error('2nd parameter must be "up" or "down"');
+      if (dir !== 'up' && dir !== 'down') {
+        return new Error('2nd parameter must be "up" or "down"');
+      };
 
       /**
-       * Tech Debt: Use mapOverIndices
+       * Tech Debt: Use a mapping function.
        */
-
-      for (key in this._indices) {
+      for (var key in this._indices) {
+        var maybeSith = this._indices[key];
         var num = parseInt(key);
         var newIndex = dir === 'up' ? num += times : num -= times;
         if (num <= this._tail && num >= this._head) {
-          newIndices[num] = this._indices[key];
-          //must update index in Sith
-          this._indices[key].index = num;
+          //Is in range, we are keeping this sith.
+          newIndices[num] = maybeSith;
+          //must update index in maybeSith
+          if (!!maybeSith) maybeSith.index = num;
         } else {
-
+          //Is not in range, we are removing this sith.
           /**
-           * Warn: Cancelling logic is closely coupled.
+           * Warn: Cancelling logic is coupled:: only happens here.
            */
-          this._indices[key].cancel();
+          if (!!maybeSith) {
+            if (!!maybeSith.isPending()) {
+              maybeSith.cancel();
+            }
+          } else {
+            //is null
+          }
         }
       }
-
       this._indices = newIndices; //old data will be GC'd
+
+      this._dashboard.renderList();
+      this.resumeFetching();
+
+      if (this.numberOfLoadedSith() < 1) {
+        var dash = this._dashboard;
+        dash._ui.disableAll.bind(dash)();
+      }
+      /**
+       * 
+       */
+      // Tech Debt or effective decoupling? Not returning the removed Sith.
+      // return sithRemoved;
+    }
+  }, {
+    key: 'stopFetchingAll',
+    value: function stopFetchingAll() {
+      //cancellAll --- Not needed yet.
+    }
+  }, {
+    key: 'resumeFetching',
+    value: function resumeFetching() {
+
+      var found = this.findOneSith();
+      this.fillRemainingSlots(found);
     }
   }, {
     key: 'shiftListUp',
     value: function shiftListUp() {
-      this.shiftList(2, 'up');
+
+      return this.shiftList(2, 'up');
     }
   }, {
     key: 'shiftListDown',
     value: function shiftListDown() {
-      this.shiftList(2, 'down');
+
+      return this.shiftList(2, 'down');
     }
   }, {
     key: 'cancelAll',
@@ -384,19 +490,26 @@ var SithList = (function () {
       return !!(this._indices[key] instanceof Sith);
     }
   }, {
-    key: 'getLength',
-    value: function getLength() {
-      // var count = 0;
-      // for (keys in this._indices) {
-      //   count++
-      // }
-      // return count;
-      return Object.keys(this._indices).length;
+    key: 'numberOfLoadedSith',
+    value: function numberOfLoadedSith() {
+      /**
+       * tech debt: use _ filter
+       * @type {Number}
+       */
+      var count = 0;
+      var storage = this._indices;
+      for (key in this._indices) {
+        var maybeSith = storage[key];
+        if (maybeSith instanceof Sith && maybeSith.hasData()) {
+          count++;
+        };
+      }
+      return count;
     }
   }, {
     key: 'resumeFetching',
     value: function resumeFetching() {
-      var first = this.getFirstSith();
+      var first = this.findOneSith();
       first.fillRemainingSlots(first);
     }
 
@@ -407,12 +520,12 @@ var SithList = (function () {
      * @return {[type]} [description]
      */
   }, {
-    key: 'getFirstSith',
-    value: function getFirstSith() {
+    key: 'findOneSith',
+    value: function findOneSith() {
       var obj = this._indices;
       for (var key in obj) {
         var s = obj[key];
-        if (s instanceof Sith && s.data.hasData()) {
+        if (s instanceof Sith && s.hasData()) {
           return obj[key];
           break;
         }

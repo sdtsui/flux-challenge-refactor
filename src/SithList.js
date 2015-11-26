@@ -1,8 +1,6 @@
 let Sith = require('./Sith');
 let __D = require('./constants');
 
-
-
 class SithList {
   constructor(dashboard) {
     this._dashboard = dashboard;
@@ -21,6 +19,13 @@ class SithList {
   }
   //logic for fetching master/apprentice stays in here
 
+  /**
+   * Shifts the list `times` times in `dir` direction.
+   * returns an array of removed Sith.
+   * @param  {[type]} times [description]
+   * @param  {[type]} dir   [description]
+   * @return {[type]}       [description]
+   */
   shiftList(times, dir) {
     let newIndices = {
       "0" : null,
@@ -29,39 +34,70 @@ class SithList {
       "3" : null,
       "4" : null,      
     };
-
-    if (dir !== 'up' || dir !== 'down') return 
-      new Error('2nd parameter must be "up" or "down"');
+    if (dir !== 'up' && dir !== 'down') {
+      return new Error('2nd parameter must be "up" or "down"')
+    };
     
     /**
-     * Tech Debt: Use mapOverIndices
+     * Tech Debt: Use a mapping function.
      */
-
-    for (key in this._indices) {
+    for (var key in this._indices) {
+      var maybeSith = this._indices[key];
       let num = parseInt(key);
       let newIndex = (dir === 'up') ? num += times : num -= times;
       if (num <= this._tail && num >= this._head) {
-        newIndices[num] = this._indices[key];
-        //must update index in Sith
-        this._indices[key].index = num;
+        //Is in range, we are keeping this sith.
+        newIndices[num] = maybeSith;
+        //must update index in maybeSith
+        if (!!maybeSith) maybeSith.index = num;
       } else {
-
+        //Is not in range, we are removing this sith.
         /**
-         * Warn: Cancelling logic is closely coupled.
+         * Warn: Cancelling logic is coupled:: only happens here.
          */
-        this._indices[key].cancel();
+        if(!!maybeSith){
+          if (!!maybeSith.isPending()){
+            maybeSith.cancel();
+          }
+        } else {
+          //is null
+        }
       }
     }
-
     this._indices = newIndices; //old data will be GC'd
+
+    this._dashboard.renderList();
+    this.resumeFetching();
+
+    if(this.numberOfLoadedSith() < 1) {
+      let dash = this._dashboard
+      dash._ui.disableAll.bind(dash)();
+    }
+    /**
+     * 
+     */
+    // Tech Debt or effective decoupling? Not returning the removed Sith.
+    // return sithRemoved;
+  }
+
+  stopFetchingAll() {
+    //cancellAll --- Not needed yet.
+  }
+
+  resumeFetching() {
+    
+    let found = this.findOneSith();
+    this.fillRemainingSlots(found);
   }
 
   shiftListUp() {
-    this.shiftList(2, 'up');
+    
+    return this.shiftList(2, 'up');
   }
 
   shiftListDown() {
-    this.shiftList(2, 'down')
+    
+    return this.shiftList(2, 'down')
   }
 
   cancelAll() {
@@ -120,17 +156,24 @@ class SithList {
     return !!(this._indices[key] instanceof Sith);
   }
 
-  getLength() {
-    // var count = 0;
-    // for (keys in this._indices) {
-    //   count++
-    // }
-    // return count;
-    return Object.keys(this._indices).length;
+  numberOfLoadedSith() {
+    /**
+     * tech debt: use _ filter
+     * @type {Number}
+     */
+    let count = 0;
+    let storage = this._indices;
+    for (key in this._indices) {
+      let maybeSith = storage[key];
+      if (maybeSith instanceof Sith && maybeSith.hasData()){
+        count++;
+      };
+    }
+    return count;
   }
 
   resumeFetching() {
-    let first = this.getFirstSith()
+    let first = this.findOneSith();
     first.fillRemainingSlots(first);
   }
 
@@ -140,11 +183,11 @@ class SithList {
    * Used as a default param for fillRemainingSlots;
    * @return {[type]} [description]
    */
-  getFirstSith() {
+  findOneSith() {
     let obj = this._indices
     for (var key in obj) {
       let s = obj[key];
-      if (s instanceof Sith && s.data.hasData()) {
+      if (s instanceof Sith && s.hasData()) {
         return obj[key];
         break;
       }

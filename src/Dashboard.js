@@ -7,26 +7,92 @@ class Dashboard {
   constructor(entryPoint = document.querySelector('.app-container')) {
     this.$el = entryPoint;
     this.render();
+    /**
+     * Tech Debt: Messy storage of nodes
+     * @type {[type]}
+     */
     this.el_scrollable_list = document.querySelector('css-scrollable-list');
     this.el_slots = document.querySelector('.css-slots');
-    this.el_obiwan = document.querySelector('.css-planet-monitor');
+    this.el_jedi = document.querySelector('.css-planet-monitor');
     this.el_top_button = document.querySelector('.css-button-up');
     this.el_btm_button = document.querySelector('.css-button-down');
-    console.log("FIRST RENDER");
+    this.buttons = [this.el_top_button, this.el_btm_button];
 
-    this.sithlist = new SithList(this);
-    this.obiwan = {};//TBD
+    /**
+     * Components:
+     *   - obiwan
+     *   - button controller for UI input
+     *   - sithList is a SithList instance, stores Sith instances
+     * @type {SithList}
+     */
+    this._sithlist = new SithList(this);
+    this._jedi = {};//TBD
 
-    console.log("PASSING IN", this.el_slots);
-    console.log("PASSING IN", this.el_slots === this.el_slots);
-    console.log("ESCOND RENDER");
+    /**
+     * This object is a candidate for use of function composition.
+     * It is inherently stateless.
+     * @type {Object}
+     */
+    this._ui = {
+      _frozen : false,
+      topIsActive : () => {},
+      btmIsActive : () => {},
+      respondToClick: (event) => {
+        let t = event.currentTarget;
+        if (!t.classList.contains('css-button-disabled')) {
+          //not disabled, so invoke shift
+          let sList = this._sithlist;
+          let fnKey = (t.classList.contains('css-button-up'))
+            ? 'shiftListUp' : 'shiftListDown';
+          sList[fnKey].bind(this._sithlist)();
+        } else {
+          //do nothing, button is disabled
+        }
+      },
+      disableIfActive : (btn) => {
+        if (!btn.classList.contains('css-button-disabled')) {
+          btn.classList.toggle('css-button-disabled');
+        }
+      },
+      //must bind This
+      enableIfAllowed : (btn) => {
+        if (this._ui._frozen === false) {
+          if (btn.classList.contains('css-button-disabled')) {
+            btn.classList.toggle('css-button-disabled');
+          }    
+        }
+        //if UI isn't frozen.
+        //rules: UI is not frozen.
+        //  top if top has a master
+        //  bottom if bottom has a master
+      },
+      forEachButton : (cb) => {
+        this.buttons.forEach(cb);
+      },
+      disableAll : () => {
+        let btns = this._ui;
+        btns.forEachButton(btns.disableIfActive);
+      }
+      //must bind This
+    };
+
 
     this.render(this.el_slots);
+    this.buttons.forEach((btn) => {
+      btn.addEventListener('mousedown', this._ui.respondToClick.bind(this._sithList));
+    }.bind(this));
+
+    //disable to start
+    this._ui.forEachButton(this._ui.disableIfActive);
 
     //when events are fired that end a planet conflict, remember to re-trigger
     //'resumefetching'
   }
 
+  /**
+   * [renderList description]
+   * @return {[type]} [description]
+   */
   renderList() {
     let fn = this.render.bind(this, this.el_slots);
     fn();
@@ -55,22 +121,8 @@ class Dashboard {
       </div>`;
       document.querySelector('.app-container').innerHTML = templateString;
     } else if (node === this.el_slots) {
-      //Tech Debt: May not always iterate in correct order.
-      //May need to convert into an array and sort by index first.
-      // let m = mappedData = this.sithlist.mapOverIndices((maybeSith) => {
-      //   if (maybeSith && maybeSith instanceof Sith) {
-      //     let hasData = maybeSith.hasData();
-      //     let n = (hasData) ? maybeSith.data.name : '';
-      //     let h = (hasData) ? 'Homeworld: ' + maybeSith.data.homeworld.name : '';
-      //     return {
-      //       n : n,
-      //       h : h,
-      //     };
-      //   } 
-      // });
-      // 
       node.innerHTML = '';
-      let m = this.sithlist._indices;
+      let m = this._sithlist._indices;
       for (var key in m) {
         let sith = m[key];
         let name = (!!sith && sith.hasData()) ? sith.data.name : "";
@@ -80,7 +132,6 @@ class Dashboard {
         let newSlot = document.createElement('li');
         newSlot.innerHTML = '<h3>' + name +'</h3><h6>'+ homeworld +'</h6>';
         newSlot.classList.toggle('css-slot');      
-        console.log('appending data from key : ', key);
         node.appendChild(newSlot);
         // Tech Debt : Why wasn't this working?
         // _HTML += ('<li class="css-slot"><h3>' + 
