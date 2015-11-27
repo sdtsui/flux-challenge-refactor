@@ -132,22 +132,6 @@ class SithList {
     });
   }
 
-  addToTop() {
-
-  }
-
-  addToBottom() {
-
-  }
-
-  removeFromTop() {
-
-  }
-
-  removeFromBottom() {
-
-  }
-
   hasHomeWorld(world) {
     return !!this._homeworlds[world];
 

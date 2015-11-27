@@ -151,10 +151,6 @@ var Dashboard = (function () {
           //   '</h6></li>');
         }
       } else if (node === this.el_obiwan) {} else if (node === this.el_top_button || node === this.el_btm_button) {}
-      //render template onto DOM
-      //case - node is el_sithList, rerender based on SithList
-      //case - node is el_obiwan, rerender based on obiwan tracker
-      //case - buttons --> toggle?
     }
   }]);
 
@@ -338,9 +334,6 @@ var Sith = (function () {
     value: function getName() {
       if (this.data.name) return this.data.name;
     }
-  }, {
-    key: 'doNothing',
-    value: function doNothing() {}
   }]);
 
   return Sith;
@@ -500,18 +493,6 @@ var SithList = (function () {
         data.cancel();
       });
     }
-  }, {
-    key: 'addToTop',
-    value: function addToTop() {}
-  }, {
-    key: 'addToBottom',
-    value: function addToBottom() {}
-  }, {
-    key: 'removeFromTop',
-    value: function removeFromTop() {}
-  }, {
-    key: 'removeFromBottom',
-    value: function removeFromBottom() {}
   }, {
     key: 'hasHomeWorld',
     value: function hasHomeWorld(world) {

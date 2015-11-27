@@ -150,7 +150,6 @@ class Sith {
     if (this.data.name) return this.data.name;
   }
 
-  doNothing() {}
 }
 
 

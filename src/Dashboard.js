@@ -84,7 +84,6 @@ class Dashboard {
       //must bind This to dashboard
     };
 
-
     this.render(this.el_slots);
     this._ui.buttons.forEach((btn) => {
       btn.addEventListener('mousedown', this._ui.respondToClick.bind(this._sithList));
@@ -152,12 +151,7 @@ class Dashboard {
 
     } else if (node === this.el_top_button || 
       node === this.el_btm_button) {
-
     }
-    //render template onto DOM
-    //case - node is el_sithList, rerender based on SithList
-    //case - node is el_obiwan, rerender based on obiwan tracker
-    //case - buttons --> toggle?
   }
 
 }
