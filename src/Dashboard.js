@@ -1,6 +1,8 @@
 let SithList = require('./SithList');
 let __D = require('./constants');
 let Sith = require('./Sith');
+let Jedi = require('./SocketComponent');
+
 
 
 class Dashboard {
@@ -25,7 +27,7 @@ class Dashboard {
      * @type {SithList}
      */
     this._sithlist = new SithList(this);
-    this._jedi = {};//TBD
+    this._jedi = new Jedi(__D.socketHost);
 
     /**
      * This object is a candidate for use of function composition.

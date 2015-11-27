@@ -79,6 +79,7 @@ class SithList {
     this._indices = newIndices; //old data will be GC'd
 
     this._dashboard.renderList();
+    console.log('current homeworlds stored in hash :', homeworld);
     console.log('thisnum : ', this.numberOfLoadedSith());
     if(this.numberOfLoadedSith() < 1) {
       //disable UI input first
@@ -134,7 +135,6 @@ class SithList {
 
   hasHomeWorld(world) {
     return !!this._homeworlds[world];
-
   }
 
   mapOverIndices(cb) {

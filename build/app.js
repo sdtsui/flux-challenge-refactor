@@ -8,6 +8,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 var SithList = require('./SithList');
 var __D = require('./constants');
 var Sith = require('./Sith');
+var Jedi = require('./SocketComponent');
 
 var Dashboard = (function () {
   function Dashboard() {
@@ -37,7 +38,7 @@ var Dashboard = (function () {
      * @type {SithList}
      */
     this._sithlist = new SithList(this);
-    this._jedi = {}; //TBD
+    this._jedi = new Jedi(__D.socketHost);
 
     /**
      * This object is a candidate for use of function composition.
@@ -159,7 +160,7 @@ var Dashboard = (function () {
 
 module.exports = Dashboard;
 
-},{"./Sith":2,"./SithList":3,"./constants":5}],2:[function(require,module,exports){
+},{"./Sith":2,"./SithList":3,"./SocketComponent":4,"./constants":6}],2:[function(require,module,exports){
 'use strict';
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -341,7 +342,7 @@ var Sith = (function () {
 
 module.exports = Sith;
 
-},{"./constants":5}],3:[function(require,module,exports){
+},{"./constants":6}],3:[function(require,module,exports){
 'use strict';
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
@@ -435,6 +436,7 @@ var SithList = (function () {
       this._indices = newIndices; //old data will be GC'd
 
       this._dashboard.renderList();
+      console.log('current homeworlds stored in hash :', homeworld);
       console.log('thisnum : ', this.numberOfLoadedSith());
       if (this.numberOfLoadedSith() < 1) {
         //disable UI input first
@@ -610,13 +612,70 @@ var SithList = (function () {
 
 module.exports = SithList;
 
-},{"./Sith":2,"./constants":5}],4:[function(require,module,exports){
+},{"./Sith":2,"./constants":6}],4:[function(require,module,exports){
+'use strict';
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+var SocketComponent = (function () {
+  function SocketComponent(url) {
+    _classCallCheck(this, SocketComponent);
+
+    this._socket_url = url;
+    this._location = null;
+    this._location_id = null;
+    this.$el = document.querySelector('.css-planet-monitor');
+
+    /**
+     * Socket Connection
+     * @param  {[type]} 'ws:                 socket.onopen [description]
+     * @return {[type]}      [description]
+     */
+    var socket = new WebSocket(this._socket_url);
+    socket.onopen = function () {
+      socket.send('Listening to Obi-Wan\'s location');
+    };
+    socket.onmessage = this.updateLocation.bind(this);
+  }
+
+  _createClass(SocketComponent, [{
+    key: 'getLocation',
+    value: function getLocation() {
+      return {
+        name: this._location_id,
+        id: this._location
+      };
+    }
+  }, {
+    key: 'formatLocation',
+    value: function formatLocation(suffix) {
+      return "Obi-Wan currently on " + suffix;
+    }
+  }, {
+    key: 'updateLocation',
+    value: function updateLocation(res) {
+      var data = JSON.parse(res.data);
+      this._location = data.name;
+      this._location_id = data.id;
+      this.$el.innerHTML = this.formatLocation(data.name);
+    }
+  }]);
+
+  return SocketComponent;
+})();
+
+module.exports = SocketComponent;
+
+},{}],5:[function(require,module,exports){
 'use strict';
 // import * as __D from './constants';
 // import * as Dashboard from './Dashboard';
 // import Sith from './Sith';
 // import SithList from './SithList';
 
+var Jedi = require('./SocketComponent');
 var Dashboard = require('./Dashboard');
 var Sith = require('./Sith');
 var SithList = require('./SithList');
@@ -625,7 +684,7 @@ var __D = require('./constants');
 var appContainer = document.querySelector('.app-container');
 var dash = new Dashboard(appContainer);
 
-},{"./Dashboard":1,"./Sith":2,"./SithList":3,"./constants":5}],5:[function(require,module,exports){
+},{"./Dashboard":1,"./Sith":2,"./SithList":3,"./SocketComponent":4,"./constants":6}],6:[function(require,module,exports){
 "use strict";
 
 var __D = {
@@ -635,7 +694,7 @@ var __D = {
 
 module.exports = __D;
 
-},{}]},{},[4])
+},{}]},{},[5])
 
 
 //# sourceMappingURL=app.js.map

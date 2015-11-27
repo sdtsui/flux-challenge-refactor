@@ -4,6 +4,7 @@
 // import Sith from './Sith';
 // import SithList from './SithList';
 
+let Jedi = require('./SocketComponent');
 let Dashboard = require('./Dashboard');
 let Sith = require('./Sith');
 let SithList = require('./SithList');
