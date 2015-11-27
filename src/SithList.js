@@ -27,6 +27,7 @@ class SithList {
    * @return {[type]}       [description]
    */
   shiftList(times, dir) {
+
     let newIndices = {
       "0" : null,
       "1" : null,
@@ -63,10 +64,7 @@ class SithList {
             //maybeSith has data, and is leaving, so we keep last
             //to handle 'empty UI' edge case
             let world = maybeSith.data.homeworld.name;
-            // console.log('deleting world:', world, this._homeworlds);
             delete this._homeworlds[world];
-            // console.log('deleted world:', world, this._homeworlds);
-            // debugger;
             __last_removed_sith = maybeSith;
             /**
              * implementation detail: 
@@ -129,9 +127,13 @@ class SithList {
     return this.shiftList(2, 'down')
   }
 
-  cancelAll() {
-    this.mapOverIndices((data) => {
-      data.cancel();
+  cancelAllAjax() {
+    console.log('cancelling all ajax_____');
+    this.mapOverIndices((sith) => {
+      if (!sith.hasData()){
+        //must be pending
+        sith.cancel();
+      }
     });
   }
 
@@ -227,7 +229,9 @@ class SithList {
         }
       }
     }
-    return new Error('sithList.findOneSith returned null');
+
+    //list is empty
+    return null;
   }
 
 }

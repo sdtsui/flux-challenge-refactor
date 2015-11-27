@@ -1,6 +1,5 @@
 let __D = require('./constants');
 
-
 class Sith {
   constructor(url, index, sithlist) {
     if (index === undefined) return new Error('No index');
@@ -30,11 +29,10 @@ class Sith {
     //Problematic...
     let dash = this._sithlist._dashboard;
     dash.renderList();
-    dash._ui.forEachButton(dash._ui.enableIfAllowed.bind(dash));
+    dash._ui.forEachButton(dash._ui.enableIfInactive.bind(dash));
     /**
      * 
      */
-
     //call fetch again, with specific params to end or do nothing
     this.fillRemainingSlots(this);
   }

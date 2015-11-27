@@ -68,7 +68,7 @@ var Dashboard = (function () {
         }
       },
       //must bind this to dashboard
-      enableIfAllowed: function enableIfAllowed(btn) {
+      enableIfInactive: function enableIfInactive(btn) {
         if (_this._ui._frozen === false) {
           if (btn.classList.contains('css-button-disabled')) {
             btn.classList.toggle('css-button-disabled');
@@ -93,10 +93,21 @@ var Dashboard = (function () {
         } else {
           ui.forEachButton(ui.disableIfActive);
         }
+      },
+      enableAll: function enableAll(target) {
+        var ui = _this._ui;
+        //disables all if no params past
+        if (target === 'top') {
+          ui.enableIfInactive(ui.buttons[0]);
+        } else if (target === 'btm') {
+          ui.enableIfInactive(ui.buttons[1]);
+        } else {
+          ui.forEachButton(ui.enableIfInactive);
+        }
       }
-      //must bind This to dashboard
     };
 
+    //must bind This to dashboard
     this.render(this.el_slots);
     this._ui.buttons.forEach((function (btn) {
       btn.addEventListener('mousedown', _this._ui.respondToClick.bind(_this._sithList));
@@ -104,7 +115,9 @@ var Dashboard = (function () {
 
     //disable to start
     this._ui.forEachButton(this._ui.disableIfActive);
-    debugger;
+
+    this._jedi.connectSocket();
+
     //when events are fired that end a planet conflict, remember to re-trigger
     //'resumefetching'
   }
@@ -127,25 +140,29 @@ var Dashboard = (function () {
       fn();
     }
   }, {
-    key: 'checkForHomeworldMatch',
-    value: function checkForHomeworldMatch(newWorld) {
-      if (!!this._sithlist._homeworlds[newWorld]) {
-        this.freezeUI();
-        this.cancelAllAjax();
+    key: 'checkIfWorldMatch',
+    value: function checkIfWorldMatch(worldName) {
+      console.log('check completed. Match : ', !!this._sithlist._homeworlds[worldName]);
+      var found = this._sithlist._homeworlds[worldName];
+      if (!!found) {
+
+        this._ui.disableAll();
+        this._sithlist.cancelAllAjax();
+        this.markSith(worldName);
       }
-      console.log('check completed');
     }
   }, {
-    key: 'worldMatchExists',
-    value: function worldMatchExists() {}
-  }, {
-    key: 'freeze_UI',
-    value: function freeze_UI() {
-      console.log('+++++++WORLD______MATCH++++++');
+    key: 'markSith',
+    value: function markSith(worldName) {
+      var slots = document.querySelectorAll('.css-slot');
+      for (var i = 0; i < slots.length; i++) {
+        var texts = slots[i].childNodes;
+        if (texts[1].innerText.includes(worldName)) {
+          texts[0].style.color = 'red';
+          texts[1].style.color = 'red';
+        }
+      }
     }
-  }, {
-    key: 'cancelAllAjax',
-    value: function cancelAllAjax() {}
   }, {
     key: 'render',
     value: function render(node) {
@@ -168,7 +185,7 @@ var Dashboard = (function () {
         for (var key in m) {
           var sith = m[key];
           var _name = !!sith && sith.hasData() ? sith.data.name : "";
-          var homeworld = !!sith && sith.hasData() ? sith.data.homeworld.name : "";
+          var homeworld = !!sith && sith.hasData() ? 'Homeworld: ' + sith.data.homeworld.name : "";
           var newSlot = document.createElement('li');
           newSlot.innerHTML = '<h3>' + _name + '</h3><h6>' + homeworld + '</h6>';
           newSlot.classList.toggle('css-slot');
@@ -231,11 +248,10 @@ var Sith = (function () {
       //Problematic...
       var dash = this._sithlist._dashboard;
       dash.renderList();
-      dash._ui.forEachButton(dash._ui.enableIfAllowed.bind(dash));
+      dash._ui.forEachButton(dash._ui.enableIfInactive.bind(dash));
       /**
        * 
        */
-
       //call fetch again, with specific params to end or do nothing
       this.fillRemainingSlots(this);
     }
@@ -415,6 +431,7 @@ var SithList = (function () {
   _createClass(SithList, [{
     key: 'shiftList',
     value: function shiftList(times, dir) {
+
       var newIndices = {
         "0": null,
         "1": null,
@@ -451,10 +468,7 @@ var SithList = (function () {
               //maybeSith has data, and is leaving, so we keep last
               //to handle 'empty UI' edge case
               var world = maybeSith.data.homeworld.name;
-              // console.log('deleting world:', world, this._homeworlds);
               delete this._homeworlds[world];
-              // console.log('deleted world:', world, this._homeworlds);
-              // debugger;
               __last_removed_sith = maybeSith;
               /**
                * implementation detail: 
@@ -522,10 +536,14 @@ var SithList = (function () {
       return this.shiftList(2, 'down');
     }
   }, {
-    key: 'cancelAll',
-    value: function cancelAll() {
-      this.mapOverIndices(function (data) {
-        data.cancel();
+    key: 'cancelAllAjax',
+    value: function cancelAllAjax() {
+      console.log('cancelling all ajax_____');
+      this.mapOverIndices(function (sith) {
+        if (!sith.hasData()) {
+          //must be pending
+          sith.cancel();
+        }
       });
     }
   }, {
@@ -634,7 +652,9 @@ var SithList = (function () {
           }
         }
       }
-      return new Error('sithList.findOneSith returned null');
+
+      //list is empty
+      return null;
     }
   }]);
 
@@ -659,21 +679,58 @@ var SocketComponent = (function () {
     this._location = null;
     this._location_id = null;
     this._el = document.querySelector('.css-planet-monitor');
+    this._socket = new WebSocket(this._socket_url);
+
+    /**
+     * Note to self: 
+     */
+    //store state of the locked UI -- cleaner alternative to redundantly
+    //re-assigning and re-ren dering.
+    // this.previous_UI_State = false; || {
+    //    indices of Match : 2,3,
+    //    top-active : false,
+    //    bottom-active: true;
+    // }
+
     /**
      * Socket Connection
      * @param  {[type]} 'ws:                 socket.onopen [description]
      * @return {[type]}      [description]
      */
-    var socket = new WebSocket(this._socket_url);
-    socket.onopen = function () {
-      socket.send('Listening to Obi-Wan\'s location');
-    };
-    socket.onmessage = this.updateLocation.bind(this);
   }
 
   _createClass(SocketComponent, [{
     key: 'connectSocket',
-    value: function connectSocket() {}
+    value: function connectSocket() {
+      var _this = this;
+
+      this._socket.onopen = function () {
+        _this._socket.send('Listening to Obi-Wan\'s location');
+      };
+
+      var onMessageFn = (function (res) {
+        var dash = _this._dashboard;
+        var newLoc = _this.updateLocation.bind(_this)(res);
+        //rerender the central dashboard
+        console.log('rerender');
+        dash.render(dash.el_slots);
+
+        console.log('re-enable all buttons');
+        dash._ui.enableAll();
+
+        console.log('disable the same old buttons, and restart fetching');
+        var sl = dash._sithlist;
+        var found = sl.findOneSith();
+        if (found) {
+          found.fillRemainingSlots(found);
+        }
+
+        //activate both arrows
+        //  deactivate in Sith logic already present: pretend a new one came in
+        dash.checkIfWorldMatch.bind(dash)(newLoc);
+      }).bind(this);
+      this._socket.onmessage = onMessageFn;
+    }
   }, {
     key: 'getLocation',
     value: function getLocation() {
@@ -694,14 +751,7 @@ var SocketComponent = (function () {
       this._location = data.name;
       this._location_id = data.id;
       this._el.innerHTML = this.formatLocation(data.name);
-
-      var dash = this._dashboard;
-      console.log('dash check', dash);
-      console.log('dash hwm: ', dash.checkForHomeWorldMatch);
-      debugger;
-
-      this._dashboard.checkForHomeWorldMatch(this._location);
-      var match = dash.checkForHomeWorldMatch(this._location);
+      return data.name;
     }
   }]);
 

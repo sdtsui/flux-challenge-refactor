@@ -57,7 +57,7 @@ class Dashboard {
         }
       },
       //must bind this to dashboard
-      enableIfAllowed : (btn) => {
+      enableIfInactive : (btn) => {
         if (this._ui._frozen === false) {
           if (btn.classList.contains('css-button-disabled')) {
             btn.classList.toggle('css-button-disabled');
@@ -82,7 +82,18 @@ class Dashboard {
         } else {
           ui.forEachButton(ui.disableIfActive);          
         }
-      }
+      },
+      enableAll : (target) => {
+        let ui = this._ui;
+        //disables all if no params past
+        if (target === 'top') {
+          ui.enableIfInactive(ui.buttons[0]);
+        } else if (target === 'btm') {
+          ui.enableIfInactive(ui.buttons[1]);
+        } else {
+          ui.forEachButton(ui.enableIfInactive);          
+        }
+      },
       //must bind This to dashboard
     };
 
@@ -93,7 +104,11 @@ class Dashboard {
 
     //disable to start
     this._ui.forEachButton(this._ui.disableIfActive);
-    debugger;
+
+
+
+    this._jedi.connectSocket();
+
     //when events are fired that end a planet conflict, remember to re-trigger
     //'resumefetching'
   }
@@ -112,23 +127,26 @@ class Dashboard {
     fn();
   }
 
-  checkForHomeworldMatch(newWorld) {
-    if (!!this._sithlist._homeworlds[newWorld]){
-      this.freezeUI();
-      this.cancelAllAjax();
+  checkIfWorldMatch(worldName) {
+    console.log('check completed. Match : ', !!this._sithlist._homeworlds[worldName]);
+    let found = this._sithlist._homeworlds[worldName];
+    if (!!found){
+
+      this._ui.disableAll();
+      this._sithlist.cancelAllAjax();
+      this.markSith(worldName);
     }
-    console.log('check completed');
   }
 
-  worldMatchExists() {
-  }
-
-  freeze_UI() {
-    console.log('+++++++WORLD______MATCH++++++');
-  }
-
-  cancelAllAjax() {
-
+  markSith(worldName) {
+    let slots = document.querySelectorAll('.css-slot');
+    for (var i = 0; i < slots.length; i++){
+      let texts = slots[i].childNodes;
+      if (texts[1].innerText.includes(worldName)) {
+        texts[0].style.color = 'red';
+        texts[1].style.color = 'red';
+      }
+    }
   }
 
   render(node) {
@@ -163,7 +181,7 @@ class Dashboard {
         let sith = m[key];
         let name = (!!sith && sith.hasData()) ? sith.data.name : "";
         let homeworld = (!!sith && sith.hasData()) ? 
-          sith.data.homeworld.name : 
+          'Homeworld: ' + sith.data.homeworld.name : 
           "";
         let newSlot = document.createElement('li');
         newSlot.innerHTML = '<h3>' + name +'</h3><h6>'+ homeworld +'</h6>';
