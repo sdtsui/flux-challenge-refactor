@@ -16,7 +16,6 @@ class Dashboard {
     this.el_jedi = document.querySelector('.css-planet-monitor');
     this.el_top_button = document.querySelector('.css-button-up');
     this.el_btm_button = document.querySelector('.css-button-down');
-    this.buttons = [this.el_top_button, this.el_btm_button];
 
     /**
      * Components:
@@ -34,6 +33,7 @@ class Dashboard {
      * @type {Object}
      */
     this._ui = {
+      buttons : [this.el_top_button, this.el_btm_button],
       _frozen : false,
       topIsActive : () => {},
       btmIsActive : () => {},
@@ -54,7 +54,7 @@ class Dashboard {
           btn.classList.toggle('css-button-disabled');
         }
       },
-      //must bind This
+      //must bind this to dashboard
       enableIfAllowed : (btn) => {
         if (this._ui._frozen === false) {
           if (btn.classList.contains('css-button-disabled')) {
@@ -67,18 +67,26 @@ class Dashboard {
         //  bottom if bottom has a master
       },
       forEachButton : (cb) => {
-        this.buttons.forEach(cb);
+        this._ui.buttons.forEach(cb);
       },
-      disableAll : () => {
-        let btns = this._ui;
-        btns.forEachButton(btns.disableIfActive);
+      //must bind this to dashboard
+      disableAll : (target) => {
+        let ui = this._ui;
+        //disables all if no params past
+        if (target === 'top') {
+          ui.disableIfActive(ui.buttons[0]);
+        } else if (target === 'btm') {
+          ui.disableIfActive(ui.buttons[1]);
+        } else {
+          ui.forEachButton(ui.disableIfActive);          
+        }
       }
-      //must bind This
+      //must bind This to dashboard
     };
 
 
     this.render(this.el_slots);
-    this.buttons.forEach((btn) => {
+    this._ui.buttons.forEach((btn) => {
       btn.addEventListener('mousedown', this._ui.respondToClick.bind(this._sithList));
     }.bind(this));
 

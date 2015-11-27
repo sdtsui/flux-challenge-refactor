@@ -30,7 +30,6 @@ class Sith {
     //Problematic...
     let dash = this._sithlist._dashboard;
     dash.renderList();
-    debugger;
     dash._ui.forEachButton(dash._ui.enableIfAllowed.bind(dash));
     /**
      * 
@@ -46,19 +45,43 @@ class Sith {
   }
 
   maybeFetch(sith) {
+    let ui = this._sithlist._dashboard._ui;
     let apprentice = this.maybeFetchDown(sith);
     let master = this.maybeFetchUp(sith);
+    /**
+     * Tech Debt: this is button disabling logic, abstract out asap
+     * @type {[type]}
+     */
+    let head = this._sithlist.getSithAt('head');
+    if (!!head && head.data.master.url === null) {
+      ui.disableAll('top');
+    }
+
+    let tail = this._sithlist.getSithAt('tail');
+    if (!!tail && tail.data.apprentice.url === null) {
+      ui.disableAll('btm');
+    }
+    // /\ 
     return apprentice ? apprentice : 
           master ? master : null;
   }
   // checks for what to request next: returns {url,index}, or null
   // Checks apprentices.
   maybeFetchDown(sith) {
+    let fetchParams = {
+      url: null,
+      idx: null,
+      noMoreToFetch: false,
+    };
 
     let next = this.next();
     let idx = sith.index;
-    //base case: reach the bottom, can't fetch more
-    if (idx === 4 || sith.data.apprentice.url === null) {
+    if (!sith.hasData()){
+      //see if in progress
+      console.log('request in progress, not fetching more');
+      return fetchParams;
+    } else if (idx === 4 || sith.data.apprentice.url === null) {
+      //base case: reach the bottom, can't fetch more
       console.log('hitting base case down -- Disable btn?');
       return null;
     } else if (next instanceof Sith) {
@@ -76,7 +99,12 @@ class Sith {
     let prev = sith.prev();
     let idx = sith.index;
     //base case: reach the top, can't fetch more
-    if (idx === 0 || sith.data.master.url === null) {
+    if (!sith.hasData()){
+      //see if in progress
+      console.log('request in progress, not fetching more');
+      return null;
+    } else if ((idx === 0)|| sith.data.master.url === null) {
+      //at bottom, or url = null
       console.log('hitting base case in fetchUp -- Disable btn?');
       return null;
     } else if (prev instanceof Sith) {

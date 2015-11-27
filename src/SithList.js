@@ -34,6 +34,7 @@ class SithList {
       "3" : null,
       "4" : null,      
     };
+    let __last_removed_sith = undefined;
     if (dir !== 'up' && dir !== 'down') {
       return new Error('2nd parameter must be "up" or "down"')
     };
@@ -56,8 +57,19 @@ class SithList {
          * Warn: Cancelling logic is coupled:: only happens here.
          */
         if(!!maybeSith){
-          if (!!maybeSith.isPending()){
+          if (!!maybeSith.isPending() && !maybeSith.hasData()){
             maybeSith.cancel();
+          } else if (!!maybeSith.hasData()) {
+            console.log('are sith being removed?', maybeSith);
+            //maybeSith has data, and is leaving, so we keep last
+            //to handle 'empty UI' edge case
+            __last_removed_sith = maybeSith;
+            /**
+             * implementation detail: 
+             *   when going down, last sith will be 4th index, at bottom
+             *   when going up, last removed sith will be 1st index...
+             *   since 0th index is above it and will be looped over last
+             */
           }
         } else {
           //is null
@@ -68,10 +80,24 @@ class SithList {
 
     this._dashboard.renderList();
     this.resumeFetching();
-
+    console.log('thisnum : ', this.numberOfLoadedSith());
     if(this.numberOfLoadedSith() < 1) {
-      let dash = this._dashboard
+      //disable UI input first
+      let dash = this._dashboard;
       dash._ui.disableAll.bind(dash)();
+
+      //refill UI with last removed sith;
+      let LMS = __last_removed_sith;
+      if (!LMS) {
+        return new Error("error, UI empty, should have last removed sith");
+      }
+      if (dir === 'down') {
+        //load an apprentice to 2nd slot
+        this.addSithAt(LMS.data.apprentice.url, 2);
+      } else if (dir === 'up') {
+        //load a master to 2nd slot
+        this.addSithAt(LMS.data.master.url, 2);
+      }
     }
     /**
      * 
@@ -83,13 +109,11 @@ class SithList {
   stopFetchingAll() {
     //cancellAll --- Not needed yet.
   }
-
-  resumeFetching() {
+  // resumeFetching() {
     
-    let found = this.findOneSith();
-    this.fillRemainingSlots(found);
-  }
-
+  //   let found = this.findOneSith();
+  //   this.fillRemainingSlots(found);
+  // }
   shiftListUp() {
     
     return this.shiftList(2, 'up');
@@ -148,7 +172,14 @@ class SithList {
   }
 
   getSithAt(key) {
-    return this._indices[key];
+    if (typeof key === 'number'){
+      return this._indices[key];
+    } else if (typeof key === 'string') {
+      //will be head or tail
+      return this.findOneSith(key) || null;
+    } else {
+      return new Error('getSithAt, received invalid input');
+    }
   }
 
   sithExistsAt(key) {
@@ -163,7 +194,7 @@ class SithList {
      */
     let count = 0;
     let storage = this._indices;
-    for (key in this._indices) {
+    for (var key in this._indices) {
       let maybeSith = storage[key];
       if (maybeSith instanceof Sith && maybeSith.hasData()){
         count++;
@@ -174,7 +205,8 @@ class SithList {
 
   resumeFetching() {
     let first = this.findOneSith();
-    first.fillRemainingSlots(first);
+    debugger;
+    if (!!first) first.fillRemainingSlots(first);
   }
 
   /**
@@ -183,15 +215,29 @@ class SithList {
    * Used as a default param for fillRemainingSlots;
    * @return {[type]} [description]
    */
-  findOneSith() {
-    let obj = this._indices
-    for (var key in obj) {
-      let s = obj[key];
-      if (s instanceof Sith && s.hasData()) {
-        return obj[key];
-        break;
+  findOneSith(fromDirection = 'head') {
+    let obj = this._indices;
+    let maxKey = Object.keys(obj).length;
+    if (fromDirection === 'head') {
+      for (var key in obj) {
+        console.log('in head, key :', key);
+        let s = obj[key];
+        if (s instanceof Sith && s.hasData()) {
+          return obj[key];
+          break;
+        }
+      }      
+    } else if (fromDirection === 'tail') {
+      for (var key = maxKey; key >= 0; key--){
+        console.log('in tail, key :', key);
+        let s = obj[key];
+        if (s instanceof Sith && s.hasData()) {
+          return obj[key];
+          break;
+        }
       }
     }
+    return new Error('sithList.findOneSith returned null');
   }
 
 }
