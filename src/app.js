@@ -11,4 +11,3 @@ let __D = require('./constants');
 
 let appContainer = document.querySelector('.app-container');
 let dash = new Dashboard(appContainer);
-

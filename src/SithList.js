@@ -169,6 +169,11 @@ class SithList {
 
   //helperMethods:
   addSithAt(url, key) {
+    //Dirty cancel;
+    if (url === null) {
+      console.log("Tech Debt: unexplained null url");
+      return;
+    };
     let newSith = new Sith(url, key, this);
     this._indices[key] = newSith;
   }

@@ -538,6 +538,11 @@ var SithList = (function () {
   }, {
     key: 'addSithAt',
     value: function addSithAt(url, key) {
+      //Dirty cancel;
+      if (url === null) {
+        console.log("Tech Debt: unexplained null url");
+        return;
+      };
       var newSith = new Sith(url, key, this);
       this._indices[key] = newSith;
     }
