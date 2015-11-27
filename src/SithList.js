@@ -79,7 +79,6 @@ class SithList {
     this._indices = newIndices; //old data will be GC'd
 
     this._dashboard.renderList();
-    this.resumeFetching();
     console.log('thisnum : ', this.numberOfLoadedSith());
     if(this.numberOfLoadedSith() < 1) {
       //disable UI input first
@@ -98,6 +97,9 @@ class SithList {
         //load a master to 2nd slot
         this.addSithAt(LMS.data.master.url, 2);
       }
+    } else {
+      //more sith, can find one. resume fetching like normal:
+      this.resumeFetching();
     }
     /**
      * 
@@ -205,7 +207,6 @@ class SithList {
 
   resumeFetching() {
     let first = this.findOneSith();
-    debugger;
     if (!!first) first.fillRemainingSlots(first);
   }
 
