@@ -3,9 +3,8 @@ let __D = require('./constants');
 let Sith = require('./Sith');
 let Jedi = require('./SocketComponent');
 
-
-
 class Dashboard {
+
   constructor(entryPoint = document.querySelector('.app-container')) {
     this.$el = entryPoint;
     this.render();
@@ -27,11 +26,12 @@ class Dashboard {
      * @type {SithList}
      */
     this._sithlist = new SithList(this);
-    this._jedi = new Jedi(__D.socketHost);
+    this._jedi = new Jedi(__D.socketHost, this);
 
     /**
      * This object is a candidate for use of function composition.
      * It is inherently stateless.
+     * Tech Debt: Turn into another class.
      * @type {Object}
      */
     this._ui = {
@@ -93,7 +93,7 @@ class Dashboard {
 
     //disable to start
     this._ui.forEachButton(this._ui.disableIfActive);
-
+    debugger;
     //when events are fired that end a planet conflict, remember to re-trigger
     //'resumefetching'
   }
@@ -112,7 +112,34 @@ class Dashboard {
     fn();
   }
 
+  checkForHomeworldMatch(newWorld) {
+    if (!!this._sithlist._homeworlds[newWorld]){
+      this.freezeUI();
+      this.cancelAllAjax();
+    }
+    console.log('check completed');
+  }
+
+  worldMatchExists() {
+  }
+
+  freeze_UI() {
+    console.log('+++++++WORLD______MATCH++++++');
+  }
+
+  cancelAllAjax() {
+
+  }
+
   render(node) {
+    //log homeworlds at every rerender:
+    //
+    //
+    if (this._sithlist) {
+      console.log('Homeworlds Before Rerender: ');
+      console.log(this._sithlist._homeworlds);
+    }
+
     let templateString
     let _HTML;
     if (node === undefined) {

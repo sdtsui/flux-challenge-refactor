@@ -67,6 +67,12 @@ class Sith {
   }
   // checks for what to request next: returns {url,index}, or null
   // Checks apprentices.
+  // 
+  /**
+   * Tech Debt: Up/Down -- cleaner way to implement this?
+   * @param  {[type]} sith [description]
+   * @return {[type]}      [description]
+   */
   maybeFetchDown(sith) {
     let fetchParams = {
       url: null,
@@ -78,11 +84,9 @@ class Sith {
     let idx = sith.index;
     if (!sith.hasData()){
       //see if in progress
-      console.log('request in progress, not fetching more');
       return fetchParams;
     } else if (idx === 4 || sith.data.apprentice.url === null) {
       //base case: reach the bottom, can't fetch more
-      console.log('hitting base case down -- Disable btn?');
       return null;
     } else if (next instanceof Sith) {
       return sith.maybeFetchDown(next);
@@ -101,11 +105,9 @@ class Sith {
     //base case: reach the top, can't fetch more
     if (!sith.hasData()){
       //see if in progress
-      console.log('request in progress, not fetching more');
       return null;
     } else if ((idx === 0)|| sith.data.master.url === null) {
       //at bottom, or url = null
-      console.log('hitting base case in fetchUp -- Disable btn?');
       return null;
     } else if (prev instanceof Sith) {
       return sith.maybeFetchUp(prev);

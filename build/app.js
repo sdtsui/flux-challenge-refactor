@@ -38,11 +38,12 @@ var Dashboard = (function () {
      * @type {SithList}
      */
     this._sithlist = new SithList(this);
-    this._jedi = new Jedi(__D.socketHost);
+    this._jedi = new Jedi(__D.socketHost, this);
 
     /**
      * This object is a candidate for use of function composition.
      * It is inherently stateless.
+     * Tech Debt: Turn into another class.
      * @type {Object}
      */
     this._ui = {
@@ -103,7 +104,7 @@ var Dashboard = (function () {
 
     //disable to start
     this._ui.forEachButton(this._ui.disableIfActive);
-
+    debugger;
     //when events are fired that end a planet conflict, remember to re-trigger
     //'resumefetching'
   }
@@ -126,8 +127,36 @@ var Dashboard = (function () {
       fn();
     }
   }, {
+    key: 'checkForHomeworldMatch',
+    value: function checkForHomeworldMatch(newWorld) {
+      if (!!this._sithlist._homeworlds[newWorld]) {
+        this.freezeUI();
+        this.cancelAllAjax();
+      }
+      console.log('check completed');
+    }
+  }, {
+    key: 'worldMatchExists',
+    value: function worldMatchExists() {}
+  }, {
+    key: 'freeze_UI',
+    value: function freeze_UI() {
+      console.log('+++++++WORLD______MATCH++++++');
+    }
+  }, {
+    key: 'cancelAllAjax',
+    value: function cancelAllAjax() {}
+  }, {
     key: 'render',
     value: function render(node) {
+      //log homeworlds at every rerender:
+      //
+      //
+      if (this._sithlist) {
+        console.log('Homeworlds Before Rerender: ');
+        console.log(this._sithlist._homeworlds);
+      }
+
       var templateString = undefined;
       var _HTML = undefined;
       if (node === undefined) {
@@ -243,6 +272,12 @@ var Sith = (function () {
 
     // checks for what to request next: returns {url,index}, or null
     // Checks apprentices.
+    //
+    /**
+     * Tech Debt: Up/Down -- cleaner way to implement this?
+     * @param  {[type]} sith [description]
+     * @return {[type]}      [description]
+     */
   }, {
     key: 'maybeFetchDown',
     value: function maybeFetchDown(sith) {
@@ -256,11 +291,9 @@ var Sith = (function () {
       var idx = sith.index;
       if (!sith.hasData()) {
         //see if in progress
-        console.log('request in progress, not fetching more');
         return fetchParams;
       } else if (idx === 4 || sith.data.apprentice.url === null) {
         //base case: reach the bottom, can't fetch more
-        console.log('hitting base case down -- Disable btn?');
         return null;
       } else if (next instanceof Sith) {
         return sith.maybeFetchDown(next);
@@ -281,11 +314,9 @@ var Sith = (function () {
       //base case: reach the top, can't fetch more
       if (!sith.hasData()) {
         //see if in progress
-        console.log('request in progress, not fetching more');
         return null;
       } else if (idx === 0 || sith.data.master.url === null) {
         //at bottom, or url = null
-        console.log('hitting base case in fetchUp -- Disable btn?');
         return null;
       } else if (prev instanceof Sith) {
         return sith.maybeFetchUp(prev);
@@ -417,9 +448,13 @@ var SithList = (function () {
             if (!!maybeSith.isPending() && !maybeSith.hasData()) {
               maybeSith.cancel();
             } else if (!!maybeSith.hasData()) {
-              console.log('are sith being removed?', maybeSith);
               //maybeSith has data, and is leaving, so we keep last
               //to handle 'empty UI' edge case
+              var world = maybeSith.data.homeworld.name;
+              // console.log('deleting world:', world, this._homeworlds);
+              delete this._homeworlds[world];
+              // console.log('deleted world:', world, this._homeworlds);
+              // debugger;
               __last_removed_sith = maybeSith;
               /**
                * implementation detail: 
@@ -436,8 +471,6 @@ var SithList = (function () {
       this._indices = newIndices; //old data will be GC'd
 
       this._dashboard.renderList();
-      console.log('current homeworlds stored in hash :', homeworld);
-      console.log('thisnum : ', this.numberOfLoadedSith());
       if (this.numberOfLoadedSith() < 1) {
         //disable UI input first
         var dash = this._dashboard;
@@ -586,7 +619,6 @@ var SithList = (function () {
       var maxKey = Object.keys(obj).length;
       if (fromDirection === 'head') {
         for (var key in obj) {
-          console.log('in head, key :', key);
           var s = obj[key];
           if (s instanceof Sith && s.hasData()) {
             return obj[key];
@@ -595,7 +627,6 @@ var SithList = (function () {
         }
       } else if (fromDirection === 'tail') {
         for (var key = maxKey; key >= 0; key--) {
-          console.log('in tail, key :', key);
           var s = obj[key];
           if (s instanceof Sith && s.hasData()) {
             return obj[key];
@@ -620,14 +651,14 @@ var _createClass = (function () { function defineProperties(target, props) { for
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
 var SocketComponent = (function () {
-  function SocketComponent(url) {
+  function SocketComponent(url, dashboard) {
     _classCallCheck(this, SocketComponent);
 
+    this._dashboard = dashboard;
     this._socket_url = url;
     this._location = null;
     this._location_id = null;
-    this.$el = document.querySelector('.css-planet-monitor');
-
+    this._el = document.querySelector('.css-planet-monitor');
     /**
      * Socket Connection
      * @param  {[type]} 'ws:                 socket.onopen [description]
@@ -641,6 +672,9 @@ var SocketComponent = (function () {
   }
 
   _createClass(SocketComponent, [{
+    key: 'connectSocket',
+    value: function connectSocket() {}
+  }, {
     key: 'getLocation',
     value: function getLocation() {
       return {
@@ -659,7 +693,15 @@ var SocketComponent = (function () {
       var data = JSON.parse(res.data);
       this._location = data.name;
       this._location_id = data.id;
-      this.$el.innerHTML = this.formatLocation(data.name);
+      this._el.innerHTML = this.formatLocation(data.name);
+
+      var dash = this._dashboard;
+      console.log('dash check', dash);
+      console.log('dash hwm: ', dash.checkForHomeWorldMatch);
+      debugger;
+
+      this._dashboard.checkForHomeWorldMatch(this._location);
+      var match = dash.checkForHomeWorldMatch(this._location);
     }
   }]);
 

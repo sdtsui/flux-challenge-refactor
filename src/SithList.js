@@ -60,9 +60,13 @@ class SithList {
           if (!!maybeSith.isPending() && !maybeSith.hasData()){
             maybeSith.cancel();
           } else if (!!maybeSith.hasData()) {
-            console.log('are sith being removed?', maybeSith);
             //maybeSith has data, and is leaving, so we keep last
             //to handle 'empty UI' edge case
+            let world = maybeSith.data.homeworld.name;
+            // console.log('deleting world:', world, this._homeworlds);
+            delete this._homeworlds[world];
+            // console.log('deleted world:', world, this._homeworlds);
+            // debugger;
             __last_removed_sith = maybeSith;
             /**
              * implementation detail: 
@@ -79,8 +83,6 @@ class SithList {
     this._indices = newIndices; //old data will be GC'd
 
     this._dashboard.renderList();
-    console.log('current homeworlds stored in hash :', homeworld);
-    console.log('thisnum : ', this.numberOfLoadedSith());
     if(this.numberOfLoadedSith() < 1) {
       //disable UI input first
       let dash = this._dashboard;
@@ -210,7 +212,6 @@ class SithList {
     let maxKey = Object.keys(obj).length;
     if (fromDirection === 'head') {
       for (var key in obj) {
-        console.log('in head, key :', key);
         let s = obj[key];
         if (s instanceof Sith && s.hasData()) {
           return obj[key];
@@ -219,7 +220,6 @@ class SithList {
       }      
     } else if (fromDirection === 'tail') {
       for (var key = maxKey; key >= 0; key--){
-        console.log('in tail, key :', key);
         let s = obj[key];
         if (s instanceof Sith && s.hasData()) {
           return obj[key];
